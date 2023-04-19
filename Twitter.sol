@@ -108,6 +108,26 @@ contract Twitter {
         }        
         return true;
     }
+    /// @return The state of the function
+    //This Function Unfollows all users the caller follows
+    function unFollowAllUsers() external accountExists(msg.sender) returns(bool) { 
+        User storage user = users[msg.sender];
+        address[] storage followers = user.followers;
+        for(uint i = 0; i < followers.length; i++) {
+            address follower = followers[i];
+            User storage followerUser = users[follower];
+            address[] storage following = followerUser.following;
+            for(uint j = 0; j < following.length; j++) {
+                if(following[j] == msg.sender){
+                    following[j] = following[following.length - 1];
+                    following.pop();
+                    break;
+                }
+            }
+        }
+    delete user.following;
+    return true;
+    }
     /// @return The Addresses of Users following the caller
     function getFollowing() external view returns(address[] memory)  {
         return users[msg.sender].following;
