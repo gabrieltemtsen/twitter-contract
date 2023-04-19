@@ -18,6 +18,7 @@ contract Twitter {
         address from;
         address to;
     }
+    //Poll struct that contains the types in a struct
     struct Poll {
         uint pollId;
         string content;
@@ -76,16 +77,17 @@ contract Twitter {
         return userTweets;
     }
    
-  
-    function followUser(address _user) external onlyFollowOthers(_user) onlyFollowOnce(_user) {
+    /// @param _user An address of the user
+    function followUser(address _user) external accountExists(msg.sender) onlyFollowOthers(_user) onlyFollowOnce(_user) {
         User storage user_followed = users[msg.sender];
         user_followed.following.push(_user);
         User storage user_gained_follower = users[_user];
         user_gained_follower.followers.push(msg.sender);
 
     }
-
-    function unFollowUser(address _user) external returns(bool) {
+    /// @param _user An address of the user
+    //Function to unfollow user based on the parameter _address to be unfollowed
+    function unFollowUser(address _user) external accountExists(msg.sender) returns(bool) {
         User storage currentUser = users[msg.sender];
         User storage user_looses_follower = users[_user];
         address[] storage following = currentUser.following;
@@ -103,21 +105,19 @@ contract Twitter {
                 followers.pop();
             }
             
-        }
-            
+        }        
         return true;
-
     }
-
+    /// @return The Addresses of Users following the caller
     function getFollowing() external view returns(address[] memory)  {
         return users[msg.sender].following;
     }
-
+    /// @return The Addresses of the caller's followers
     function getFollowers() external view returns(address[] memory) {
          return users[msg.sender].followers;
 
     }
-
+    /// @return Array of all Tweets
     function getTweetFeed() view external returns(Tweet[] memory) {
         Tweet[] memory tweetFeed = new Tweet[](nextTweetId);
         for(uint i = 0; i < nextTweetId; i++) {
@@ -127,8 +127,9 @@ contract Twitter {
     }
 
     
-
-    function sendMessage(address _recipient, string calldata _content) external {
+     /// @param _recipient An address of the user
+     /// @param _content content of the message to be sent
+    function sendMessage(address _recipient, string calldata _content) accountExists(msg.sender) external {
         User storage sender = users[msg.sender];
         User storage receiver = users[_recipient];
         Message memory newMessage = Message(nextMessageId, _content, msg.sender, _recipient);  
@@ -137,13 +138,16 @@ contract Twitter {
         nextMessageId++;
 
     }
-
-    function getConversationWithUser(address _user) external view returns(Message[] memory) {
+     /// @param _user An address of the user
+    /// @return The Content of the conversation between users
+    function getConversationWithUser(address _user) external accountExists(msg.sender) view returns(Message[] memory) {
         User storage user = users[msg.sender];
         Message[] memory convo = user.conversations[_user];
         return convo;
     }
-    function createBinaryPoll(string calldata _content) external returns (bool) {
+     /// @param _content poll content
+    /// @return The state of function(true if successful)
+    function createBinaryPoll(string calldata _content) external accountExists(msg.sender) returns (bool) {
          require(bytes(_content).length > 0, "Content cannot be an empty string");
         User storage user = users[msg.sender];
         bool[] memory results;
@@ -154,14 +158,16 @@ contract Twitter {
         nextPollId++;
         return true;
     }
-    function voteOnPoll(bool _vote, uint _pollId) external {
+     /// @param _vote boolean value to vote on a pol
+     /// @param _pollId The Id of the poll to vote on
+    function voteOnPoll(bool _vote, uint _pollId) accountExists(msg.sender) external {
         Poll storage activePoll = polls[_pollId];
         require(activePoll.pollId == _pollId, "Poll does not exist");
         require(activePoll.voters.length == 0 || !contains(activePoll.voters, msg.sender), "User has already voted on this poll");
         activePoll.voters.push(msg.sender);
         activePoll.results.push(_vote);
     }
-    // Helper function to check if an element is in an array
+    //check if an element is in an array
     function contains(address[] storage array, address element) internal view returns (bool) {
         for (uint i = 0; i < array.length; i++) {
             if (array[i] == element) {
@@ -170,6 +176,8 @@ contract Twitter {
         }
        return false;
     }
+    /// @param _pollId The uint PostId of the poll
+    /// @return The results of the poll
     function getPollResults(uint _pollId) external view returns (Poll memory) {
         return polls[_pollId];
     }
@@ -186,10 +194,12 @@ contract Twitter {
        require(user.wallet != _user, "You have registered already");
         _;
     }
+    //check if users wants to follow his/herself
     modifier onlyFollowOthers(address _user) {
         require(msg.sender != _user, "You cannot follow yourself");
         _;
     }
+    //check if user has followed a particular user
      modifier onlyFollowOnce(address _user) {
         User storage currentUser = users[msg.sender];
         bool exists = false;
